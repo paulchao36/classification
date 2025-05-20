@@ -8,6 +8,14 @@ class TextClassifierGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("文字分類器")
+
+         # 🔧 預設分類關鍵字設定（可自訂）
+        self.default_categories = {
+            '生活方式': ['兒子'],
+            '配方': ['甜點'],
+            '行銷': ['行銷']
+        }
+
         self.category_entries = {}
 
         # 資料夾選擇
@@ -21,9 +29,12 @@ class TextClassifierGUI:
         self.category_frame.grid(row=1, column=0, columnspan=3, pady=10)
         tk.Label(self.category_frame, text="類別名稱").grid(row=0, column=0)
         tk.Label(self.category_frame, text="關鍵字（用逗號分隔）").grid(row=0, column=1)
-        self.add_category_row()
+        
+        self.row_counter = 0
+        self.load_default_categories()
 
         tk.Button(root, text="新增分類", command=self.add_category_row).grid(row=2, column=0, pady=5)
+        tk.Button(root, text="重設分類", command=self.reset_categories).grid(row=2, column=1, pady=5)
         tk.Button(root, text="開始分類", command=self.classify_files).grid(row=2, column=2, pady=5)
 
     def browse_folder(self):
@@ -31,13 +42,41 @@ class TextClassifierGUI:
         if folder:
             self.folder_path.set(folder)
 
-    def add_category_row(self):
-        row = len(self.category_entries) + 1
-        cat_var = tk.StringVar()
-        kw_var = tk.StringVar()
-        tk.Entry(self.category_frame, textvariable=cat_var).grid(row=row, column=0)
-        tk.Entry(self.category_frame, textvariable=kw_var, width=40).grid(row=row, column=1)
-        self.category_entries[row] = (cat_var, kw_var)
+    def add_category_row(self, category='', keywords=''):
+        self.row_counter += 1
+        row = self.row_counter
+
+        cat_var = tk.StringVar(value=category)
+        kw_var = tk.StringVar(value=keywords)
+
+        cat_entry = tk.Entry(self.category_frame, textvariable=cat_var)
+        kw_entry = tk.Entry(self.category_frame, textvariable=kw_var, width=40)
+        remove_btn = tk.Button(self.category_frame, text="移除", command=lambda r=row: self.remove_category_row(r))
+
+        cat_entry.grid(row=row, column=0)
+        kw_entry.grid(row=row, column=1)
+        remove_btn.grid(row=row, column=2)
+
+        self.category_entries[row] = (cat_var, kw_var, cat_entry, kw_entry, remove_btn)
+
+    def remove_category_row(self, row):
+        # 移除元件與記錄
+        if row in self.category_entries:
+            _, _, cat_entry, kw_entry, remove_btn = self.category_entries[row]
+            cat_entry.destroy()
+            kw_entry.destroy()
+            remove_btn.destroy()
+            del self.category_entries[row]
+
+    def reset_categories(self):
+        for widget in self.category_frame.winfo_children()[2:]:
+            widget.destroy()
+        self.category_entries.clear()
+        self.load_default_categories()
+
+    def load_default_categories(self):
+        for category, keywords in self.default_categories.items():
+            self.add_category_row(category, ', '.join(keywords))
 
     def classify_files(self):
         base_folder = self.folder_path.get()
@@ -45,9 +84,8 @@ class TextClassifierGUI:
             messagebox.showerror("錯誤", "請選擇有效的資料夾。")
             return
 
-        # 取得分類關鍵字設定
         category_keywords = {}
-        for cat_var, kw_var in self.category_entries.values():
+        for cat_var, kw_var, *_ in self.category_entries.values():
             category = cat_var.get().strip()
             keywords = [kw.strip() for kw in kw_var.get().split(',') if kw.strip()]
             if category and keywords:
@@ -57,7 +95,6 @@ class TextClassifierGUI:
             messagebox.showerror("錯誤", "請輸入至少一個分類與對應關鍵字。")
             return
 
-        # 建立排除關鍵字的正則式
         exclusion_patterns = []
         all_keywords = set(sum(category_keywords.values(), []))
         for keyword in all_keywords:
