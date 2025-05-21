@@ -12,7 +12,7 @@ class TextClassifierGUI:
          # 🔧 預設分類關鍵字設定（可自訂）
         self.default_categories = {
             '生活方式': ['兒子'],
-            '配方': ['甜點'],
+            '配方': ['甜點','配方'],
             '行銷': ['行銷']
         }
 
